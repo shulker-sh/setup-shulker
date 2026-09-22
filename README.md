@@ -4,7 +4,8 @@ Installs [shulker](https://shulker.sh), the modpack CLI, in a GitHub Actions job
 
 - installs a shulker release on Linux, macOS or Windows runners;
 - adds `shulker` to `PATH` for later steps;
-- restores and saves shulker's cache, keyed on `shulker.lock`.
+- restores and saves shulker's cache, keyed on `shulker.lock`, and prunes files the lock no longer needs;
+- outputs the lock's Minecraft and loader versions for publishing steps.
 
 ## Usage
 
@@ -25,7 +26,7 @@ version tag.
 
 | Input | Default | Description |
 | --- | --- | --- |
-| `version` | `latest` | The shulker release to install, such as `v0.0.1`. Pin it so a new shulker release never changes your builds until you bump it. |
+| `version` | `latest` | The shulker release to install, such as `v0.0.1`. Pin it so a new shulker release never changes your builds until you bump it. Leave it out to install the latest release. |
 | `lock-files` | `shulker.lock` | The lock files the cache is keyed on, one path per line, relative to the workspace. |
 | `prune` | `true` | Prune files the lock no longer needs from a cache restored from an older lock. Set it to `false` to keep them. |
 
@@ -41,8 +42,8 @@ version tag.
 | `loader-version` | The lock's mod loader version, such as `0.19.5`. Empty for a pack with no loader. |
 
 `minecraft-version`, `loader` and `loader-version` are read from the lock, so they hold exact versions even when
-`shulker.json` allows a range. They are set only when one lock file is listed. They feed
-[mc-publish](https://github.com/Kir-Antipov/mc-publish) directly:
+`shulker.json` allows a range. They are set only when one lock file is listed; with several, read each pack's with
+`shulker get --locked` instead. They feed [mc-publish](https://github.com/Kir-Antipov/mc-publish) directly:
 
 ```yaml
   - id: shulker
@@ -61,7 +62,8 @@ The action sets `SHULKER_CACHE` to a folder in the runner's temp directory and c
 `lock-files`: while the locks are unchanged, an export downloads nothing, and after a change it starts from the
 previous cache and downloads only what's new.
 
-A repository with more than one pack lists each pack's lock:
+A pack that isn't at the root of its repository names its lock with `lock-files`. A repository holding several packs
+lists each one's lock:
 
 ```yaml
   - uses: shulker-sh/setup-shulker@v1
