@@ -1,0 +1,17 @@
+{
+  "$schema": "https://shulker.sh/schema/v1/manifest.json",
+  "name": "pack-vanilla",
+  "authors": [
+    "shulker.sh"
+  ],
+  "minecraft": "26.3",
+  "requires": {},
+  "client": {
+    "options": {
+      "joinedFirstServer": true,
+      "onboardAccessibility": false,
+      "skipMultiplayerWarning": true,
+      "tutorialStep": "none"
+    }
+  }
+}

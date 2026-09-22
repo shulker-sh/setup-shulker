@@ -33,8 +33,26 @@ version tag.
 
 | Output | Description |
 | --- | --- |
-| `version` | The shulker release that was installed, such as `v0.0.1`. |
+| `shulker-version` | The shulker release that was installed, such as `v0.0.1`. |
+| `shulker-path` | The full path to the installed shulker binary. |
 | `cache-hit` | `true` when the cache was restored from an exact match for the lock files. |
+| `minecraft-version` | The lock's Minecraft version, such as `26.3`. |
+| `loader` | The lock's mod loader, such as `fabric`. Empty for a pack with no loader. |
+| `loader-version` | The lock's mod loader version, such as `0.19.5`. Empty for a pack with no loader. |
+
+`minecraft-version`, `loader` and `loader-version` are read from the lock, so they hold exact versions even when
+`shulker.json` allows a range. They are set only when one lock file is listed. They feed
+[mc-publish](https://github.com/Kir-Antipov/mc-publish) directly:
+
+```yaml
+  - id: shulker
+    uses: shulker-sh/setup-shulker@v1
+  # ... export ...
+  - uses: Kir-Antipov/mc-publish@v3.3
+    with:
+      game-versions: ${{ steps.shulker.outputs.minecraft-version }}
+      loaders: ${{ steps.shulker.outputs.loader }}
+```
 
 ## Cache
 

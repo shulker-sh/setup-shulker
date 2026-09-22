@@ -29,9 +29,14 @@ jobs:
         shell: bash
         env:
           WANT: ${{ matrix.version }}
-          OUTPUT: ${{ steps.setup.outputs.version }}
+          OUTPUT: ${{ steps.setup.outputs.shulker-version }}
+          SHULKER_PATH: ${{ steps.setup.outputs.shulker-path }}
         run: |
           shulker version
+          if [ "$("$SHULKER_PATH" version --json | jq -r .data.version)" != "$(shulker version --json | jq -r .data.version)" ]; then
+            echo "shulker-path $SHULKER_PATH is not the shulker on PATH" >&2
+            exit 1
+          fi
           info="$(shulker version --json)"
           got="$(jq -r .data.version <<< "$info")"
           if [ "v$got" != "$OUTPUT" ]; then
@@ -64,6 +69,17 @@ jobs:
         uses: ./
         with:
           lock-files: ${{ env.RUN_DIR }}/a/shulker.lock
+
+      - name: Check lock outputs
+        shell: bash
+        env:
+          GOT: ${{ steps.setup.outputs.minecraft-version }} ${{ steps.setup.outputs.loader }} ${{ steps.setup.outputs.loader-version }}
+        run: |
+          want="$(jq -r '"\(.minecraft) \(.loader.type) \(.loader.version)"' test/a/shulker.lock)"
+          if [ "$GOT" != "$want" ]; then
+            echo "lock outputs are '$GOT', want '$want'" >&2
+            exit 1
+          fi
 
       - name: Export
         shell: bash
@@ -147,7 +163,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: ./
+      - id: setup
+        uses: ./
         with:
           lock-files: |
             test/a/shulker.lock
@@ -155,6 +172,33 @@ jobs:
 
       - name: Export both
         shell: bash
+        env:
+          GOT: ${{ steps.setup.outputs.minecraft-version }}${{ steps.setup.outputs.loader }}${{ steps.setup.outputs.loader-version }}
         run: |
+          if [ -n "$GOT" ]; then
+            echo "lock outputs are set with two lock files: $GOT" >&2
+            exit 1
+          fi
           (cd test/a && shulker export mrpack --version 1.0.0)
           (cd test/b && shulker export mrpack --version 1.0.0)
+
+  vanilla:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: setup
+        uses: ./
+        with:
+          lock-files: test/vanilla/shulker.lock
+
+      - name: Check lock outputs
+        shell: bash
+        env:
+          MINECRAFT: ${{ steps.setup.outputs.minecraft-version }}
+          LOADER: ${{ steps.setup.outputs.loader }}${{ steps.setup.outputs.loader-version }}
+        run: |
+          if [ "$MINECRAFT" != "$(jq -r .minecraft test/vanilla/shulker.lock)" ] || [ -n "$LOADER" ]; then
+            echo "vanilla lock outputs are minecraft '$MINECRAFT', loader '$LOADER'" >&2
+            exit 1
+          fi

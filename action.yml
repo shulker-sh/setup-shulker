@@ -18,12 +18,24 @@ inputs:
     default: "true"
 
 outputs:
-  version:
+  shulker-version:
     description: The shulker release that was installed, such as v0.0.1.
     value: ${{ steps.resolve.outputs.version }}
+  shulker-path:
+    description: The full path to the installed shulker binary.
+    value: ${{ steps.path.outputs.shulker-path }}
   cache-hit:
     description: Whether the cache was restored from an exact match for the lock files.
     value: ${{ steps.cache.outputs.cache-hit }}
+  minecraft-version:
+    description: The lock's Minecraft version, such as 26.3. Set when one lock file is listed.
+    value: ${{ steps.lock.outputs.minecraft-version }}
+  loader:
+    description: The lock's mod loader, such as fabric. Set when one lock file is listed and the pack has a loader.
+    value: ${{ steps.lock.outputs.loader }}
+  loader-version:
+    description: The lock's mod loader version, such as 0.19.5. Set when one lock file is listed and the pack has a loader.
+    value: ${{ steps.lock.outputs.loader-version }}
 
 runs:
   using: composite
@@ -92,13 +104,28 @@ runs:
       run: irm https://shulker.sh/install.ps1 | iex
 
     - name: Add shulker to PATH
+      id: path
       shell: bash
       env:
         INSTALL_DIR: ${{ runner.temp }}/setup-shulker
         CACHE_DIR: ${{ runner.temp }}/shulker-cache
+        EXE: ${{ runner.os == 'Windows' && 'shulker.exe' || 'shulker' }}
       run: |
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        echo "shulker-path=$INSTALL_DIR/$EXE" >> "$GITHUB_OUTPUT"
         echo "SHULKER_CACHE=$CACHE_DIR" >> "$GITHUB_ENV"
+
+    - name: Read the lock
+      id: lock
+      if: steps.locks.outputs.count == '1'
+      shell: bash
+      env:
+        PROJECT: ${{ steps.locks.outputs.project }}
+      run: |
+        cd "$PROJECT"
+        echo "minecraft-version=$(shulker get --locked minecraft)" >> "$GITHUB_OUTPUT"
+        echo "loader=$(shulker get --locked loader.type 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+        echo "loader-version=$(shulker get --locked loader.version 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
 
     - name: Restore shulker cache
       id: cache
