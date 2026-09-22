@@ -1,0 +1,64 @@
+name: Setup Shulker
+description: Install the shulker modpack CLI, add it to PATH, and cache the files it downloads.
+author: shulker-sh
+
+branding:
+  icon: package
+  color: orange
+
+inputs:
+  version:
+    description: Release to install, such as v0.0.1, or latest.
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve shulker version
+      id: resolve
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        version="$INPUT_VERSION"
+        case "$version" in
+          "" | latest) version="$(gh release view --repo shulker-sh/shulker --json tagName --jq .tagName)" ;;
+          v*) ;;
+          *) version="v$version" ;;
+        esac
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Install shulker
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        SHULKER_VERSION: ${{ steps.resolve.outputs.version }}
+        SHULKER_INSTALL_DIR: ${{ runner.temp }}/setup-shulker
+        GH_TOKEN: ${{ github.token }}
+      run: curl -fsSL https://shulker.sh/install.sh | sh -s -- --no-modify-path
+
+    - name: Install shulker
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        SHULKER_VERSION: ${{ steps.resolve.outputs.version }}
+        SHULKER_INSTALL_DIR: ${{ runner.temp }}/setup-shulker
+        SHULKER_NO_MODIFY_PATH: "1"
+        GH_TOKEN: ${{ github.token }}
+      run: irm https://shulker.sh/install.ps1 | iex
+
+    - name: Add shulker to PATH
+      shell: bash
+      env:
+        INSTALL_DIR: ${{ runner.temp }}/setup-shulker
+        CACHE_DIR: ${{ runner.temp }}/shulker-cache
+      run: |
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        echo "SHULKER_CACHE=$CACHE_DIR" >> "$GITHUB_ENV"
+
+    - uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/shulker-cache
+        key: shulker-${{ runner.os }}-${{ hashFiles('shulker.lock') }}
+        restore-keys: shulker-${{ runner.os }}-

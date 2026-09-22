@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        version: [latest, 0.0.1]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./
+        with:
+          version: ${{ matrix.version }}
+
+      - name: Check shulker
+        shell: bash
+        env:
+          WANT: ${{ matrix.version }}
+        run: |
+          shulker version
+          info="$(shulker version --json)"
+          got="$(jq -r .data.version <<< "$info")"
+          if [ "$WANT" != latest ] && [ "$got" != "$WANT" ]; then
+            echo "installed $got, want $WANT" >&2
+            exit 1
+          fi
+          case "$(jq -r .data.cache <<< "$info")" in
+            *shulker-cache) ;;
+            *) echo "SHULKER_CACHE was not picked up: $info" >&2; exit 1 ;;
+          esac
