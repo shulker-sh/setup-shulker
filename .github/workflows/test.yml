@@ -159,6 +159,7 @@ jobs:
           shulker export mrpack --version 1.0.0
 
   multiple:
+    needs: prune
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -169,6 +170,16 @@ jobs:
           lock-files: |
             test/a/shulker.lock
             test/b/shulker.lock
+
+      - name: Check pack b's files survived the prune
+        shell: bash
+        run: |
+          for sha in $(jq -r '.resourcepacks[].sha512' test/b/shulker.lock); do
+            if [ ! -e "$SHULKER_CACHE/objects/${sha:0:2}/$sha" ]; then
+              echo "the prune removed $sha, which pack b needs" >&2
+              exit 1
+            fi
+          done
 
       - name: Export both
         shell: bash

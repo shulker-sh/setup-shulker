@@ -14,7 +14,7 @@ inputs:
     description: The shulker.lock files the cache is keyed on, one path per line, relative to the workspace.
     default: shulker.lock
   prune:
-    description: Prune files the lock no longer needs from a cache restored from an older lock. Only runs when one lock file is listed.
+    description: Prune files the listed locks no longer need from a cache restored from older locks.
     default: "true"
 
 outputs:
@@ -79,6 +79,11 @@ runs:
         fi
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
         echo "count=${#found[@]}" >> "$GITHUB_OUTPUT"
+        {
+          echo "paths<<SHULKER_LOCKS"
+          printf '%s\n' "${found[@]}"
+          echo "SHULKER_LOCKS"
+        } >> "$GITHUB_OUTPUT"
         if [ "${#found[@]}" -eq 1 ]; then
           echo "project=$(dirname "${found[0]}")" >> "$GITHUB_OUTPUT"
         fi
@@ -139,15 +144,17 @@ runs:
       if: inputs.prune == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
-        COUNT: ${{ steps.locks.outputs.count }}
-        PROJECT: ${{ steps.locks.outputs.project }}
+        LOCKS: ${{ steps.locks.outputs.paths }}
       run: |
         if [ -z "$(ls -A "$SHULKER_CACHE" 2>/dev/null)" ]; then
           exit 0
         fi
-        if [ "$COUNT" != 1 ]; then
-          echo "::notice::skipping cache prune: it needs exactly one lock file, and $COUNT were found"
+        args=()
+        while IFS= read -r path; do
+          [ -n "$path" ] && args+=(--lock "$path")
+        done <<< "$LOCKS"
+        if [ "${#args[@]}" -eq 0 ]; then
+          echo "::notice::skipping cache prune: no lock file was found, so it would keep nothing"
           exit 0
         fi
-        cd "$PROJECT"
-        shulker cache prune || echo "::warning::cache prune failed; the cache keeps files the lock no longer needs"
+        shulker cache prune "${args[@]}" || echo "::warning::cache prune failed; the cache keeps files the locks no longer need"

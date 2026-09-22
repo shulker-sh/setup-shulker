@@ -4,7 +4,7 @@ Installs [shulker](https://shulker.sh), the modpack CLI, in a GitHub Actions job
 
 - installs a shulker release on Linux, macOS or Windows runners;
 - adds `shulker` to `PATH` for later steps;
-- restores and saves shulker's cache, keyed on `shulker.lock`, and prunes files the lock no longer needs;
+- restores and saves shulker's cache, keyed on `shulker.lock`, and prunes files the locks no longer need;
 - outputs the lock's Minecraft and loader versions for publishing steps.
 
 ## Usage
@@ -28,7 +28,7 @@ version tag.
 | --- | --- | --- |
 | `version` | `latest` | The shulker release to install, such as `v0.0.1`. Pin it so a new shulker release never changes your builds until you bump it. Leave it out to install the latest release. |
 | `lock-files` | `shulker.lock` | The lock files the cache is keyed on, one path per line, relative to the workspace. |
-| `prune` | `true` | Prune files the lock no longer needs from a cache restored from an older lock. Set it to `false` to keep them. |
+| `prune` | `true` | Prune files the listed locks no longer need from a cache restored from older locks. Set it to `false` to keep them. |
 
 ## Outputs
 
@@ -73,9 +73,8 @@ lists each one's lock:
         packs/creative/shulker.lock
 ```
 
-When the cache is restored from an older lock, the action runs `shulker cache prune` in the lock's folder, so the
-saved cache holds only what the current lock needs, not every version it ever held. Pruning needs exactly one lock
-file: with several, the action skips it and says so.
+When the cache is restored from older locks, the action runs `shulker cache prune` with a `--lock` for each listed
+lock, so the saved cache holds only what the current locks need, not every version they ever held.
 
 ## Verification
 
