@@ -1,0 +1,26 @@
+{
+  "$schema": "https://shulker.sh/schema/v1/manifest.json",
+  "name": "pack-a",
+  "authors": [
+    "shulker.sh"
+  ],
+  "minecraft": "26.3",
+  "loader": {
+    "type": "fabric",
+    "version": "*"
+  },
+  "requires": {
+    "fresh-animations": {
+      "type": "resourcepack",
+      "channel": "beta"
+    }
+  },
+  "client": {
+    "options": {
+      "joinedFirstServer": true,
+      "onboardAccessibility": false,
+      "skipMultiplayerWarning": true,
+      "tutorialStep": "none"
+    }
+  }
+}

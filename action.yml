@@ -10,6 +10,20 @@ inputs:
   version:
     description: Release to install, such as v0.0.1, or latest.
     default: latest
+  lock-files:
+    description: The shulker.lock files the cache is keyed on, one path per line, relative to the workspace.
+    default: shulker.lock
+  prune:
+    description: Prune files the lock no longer needs from a cache restored from an older lock. Only runs when one lock file is listed.
+    default: "true"
+
+outputs:
+  version:
+    description: The shulker release that was installed, such as v0.0.1.
+    value: ${{ steps.resolve.outputs.version }}
+  cache-hit:
+    description: Whether the cache was restored from an exact match for the lock files.
+    value: ${{ steps.cache.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -29,6 +43,34 @@ runs:
         esac
         echo "version=$version" >> "$GITHUB_OUTPUT"
 
+    - name: Hash lock files
+      id: locks
+      shell: bash
+      env:
+        LOCK_FILES: ${{ inputs.lock-files }}
+      run: |
+        sha() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi | cut -d' ' -f1; }
+        found=()
+        while IFS= read -r path; do
+          path="${path#"${path%%[![:space:]]*}"}"
+          path="${path%"${path##*[![:space:]]}"}"
+          [ -n "$path" ] || continue
+          if [ -f "$path" ]; then
+            found+=("$path")
+          else
+            echo "::warning::lock file $path not found; the cache key leaves it out"
+          fi
+        done <<< "$LOCK_FILES"
+        hash=""
+        if [ "${#found[@]}" -gt 0 ]; then
+          hash="$(for path in "${found[@]}"; do echo "$path $(sha < "$path")"; done | sha)"
+        fi
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
+        echo "count=${#found[@]}" >> "$GITHUB_OUTPUT"
+        if [ "${#found[@]}" -eq 1 ]; then
+          echo "project=$(dirname "${found[0]}")" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Install shulker
       if: runner.os != 'Windows'
       shell: bash
@@ -36,7 +78,7 @@ runs:
         SHULKER_VERSION: ${{ steps.resolve.outputs.version }}
         SHULKER_INSTALL_DIR: ${{ runner.temp }}/setup-shulker
         GH_TOKEN: ${{ github.token }}
-      run: curl -fsSL https://shulker.sh/install.sh | sh -s -- --no-modify-path
+      run: curl -fsSL https://shulker.sh/install.sh | sh -s -- --no-modify-path --require-attestation
 
     - name: Install shulker
       if: runner.os == 'Windows'
@@ -45,6 +87,7 @@ runs:
         SHULKER_VERSION: ${{ steps.resolve.outputs.version }}
         SHULKER_INSTALL_DIR: ${{ runner.temp }}/setup-shulker
         SHULKER_NO_MODIFY_PATH: "1"
+        SHULKER_REQUIRE_ATTESTATION: "1"
         GH_TOKEN: ${{ github.token }}
       run: irm https://shulker.sh/install.ps1 | iex
 
@@ -57,8 +100,27 @@ runs:
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
         echo "SHULKER_CACHE=$CACHE_DIR" >> "$GITHUB_ENV"
 
-    - uses: actions/cache@v6
+    - name: Restore shulker cache
+      id: cache
+      uses: actions/cache@v6
       with:
         path: ${{ runner.temp }}/shulker-cache
-        key: shulker-${{ runner.os }}-${{ hashFiles('shulker.lock') }}
+        key: shulker-${{ runner.os }}-${{ steps.locks.outputs.hash }}
         restore-keys: shulker-${{ runner.os }}-
+
+    - name: Prune shulker cache
+      if: inputs.prune == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        COUNT: ${{ steps.locks.outputs.count }}
+        PROJECT: ${{ steps.locks.outputs.project }}
+      run: |
+        if [ -z "$(ls -A "$SHULKER_CACHE" 2>/dev/null)" ]; then
+          exit 0
+        fi
+        if [ "$COUNT" != 1 ]; then
+          echo "::notice::skipping cache prune: it needs exactly one lock file, and $COUNT were found"
+          exit 0
+        fi
+        cd "$PROJECT"
+        shulker cache prune || echo "::warning::cache prune failed; the cache keeps files the lock no longer needs"

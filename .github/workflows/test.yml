@@ -6,8 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  RUN_DIR: run/${{ github.run_id }}-${{ github.run_attempt }}
+
 jobs:
-  setup:
+  install:
     strategy:
       fail-fast: false
       matrix:
@@ -17,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: ./
+      - id: setup
+        uses: ./
         with:
           version: ${{ matrix.version }}
 
@@ -25,10 +29,15 @@ jobs:
         shell: bash
         env:
           WANT: ${{ matrix.version }}
+          OUTPUT: ${{ steps.setup.outputs.version }}
         run: |
           shulker version
           info="$(shulker version --json)"
           got="$(jq -r .data.version <<< "$info")"
+          if [ "v$got" != "$OUTPUT" ]; then
+            echo "installed $got, but the version output is $OUTPUT" >&2
+            exit 1
+          fi
           if [ "$WANT" != latest ] && [ "$got" != "$WANT" ]; then
             echo "installed $got, want $WANT" >&2
             exit 1
@@ -37,3 +46,115 @@ jobs:
             *shulker-cache) ;;
             *) echo "SHULKER_CACHE was not picked up: $info" >&2; exit 1 ;;
           esac
+
+  seed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Copy pack a
+        shell: bash
+        run: mkdir -p "$RUN_DIR" && cp -R test/a "$RUN_DIR/a"
+
+      - id: setup
+        uses: ./
+        with:
+          lock-files: ${{ env.RUN_DIR }}/a/shulker.lock
+
+      - name: Export
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.setup.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = true ]; then
+            echo "a new lock path hit the cache" >&2
+            exit 1
+          fi
+          cd "$RUN_DIR/a"
+          shulker export mrpack --version 1.0.0
+
+  hit:
+    needs: seed
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Copy pack a
+        shell: bash
+        run: mkdir -p "$RUN_DIR" && cp -R test/a "$RUN_DIR/a"
+
+      - id: setup
+        uses: ./
+        with:
+          lock-files: ${{ env.RUN_DIR }}/a/shulker.lock
+
+      - name: Export
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.setup.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" != true ]; then
+            echo "the lock seed saved did not hit the cache" >&2
+            exit 1
+          fi
+          cd "$RUN_DIR/a"
+          shulker export mrpack --version 1.0.0
+
+  prune:
+    needs: seed
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Copy pack b
+        shell: bash
+        run: mkdir -p "$RUN_DIR" && cp -R test/b "$RUN_DIR/b"
+
+      - uses: ./
+        with:
+          lock-files: ${{ env.RUN_DIR }}/b/shulker.lock
+
+      - name: Check pack a's files were pruned
+        shell: bash
+        run: |
+          for sha in $(jq -r '.resourcepacks[].sha512' test/a/shulker.lock); do
+            if [ -e "$SHULKER_CACHE/objects/${sha:0:2}/$sha" ]; then
+              echo "the cache still holds $sha, which only pack a needs" >&2
+              exit 1
+            fi
+          done
+
+      - name: Export
+        shell: bash
+        run: |
+          cd "$RUN_DIR/b"
+          shulker export mrpack --version 1.0.0
+
+  multiple:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./
+        with:
+          lock-files: |
+            test/a/shulker.lock
+            test/b/shulker.lock
+
+      - name: Export both
+        shell: bash
+        run: |
+          (cd test/a && shulker export mrpack --version 1.0.0)
+          (cd test/b && shulker export mrpack --version 1.0.0)

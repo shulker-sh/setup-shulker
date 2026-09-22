@@ -1,0 +1,30 @@
+{
+  "lockVersion": 1,
+  "minecraft": "26.3",
+  "loader": {
+    "type": "fabric",
+    "version": "0.19.5"
+  },
+  "java": {
+    "major": 25,
+    "component": "java-runtime-epsilon"
+  },
+  "modpacks": {},
+  "mods": {},
+  "resourcepacks": {
+    "low-on-fire": {
+      "provider": "modrinth",
+      "project": "RRxvWKNC",
+      "version": "yQdcUfnr",
+      "versionNumber": "26.3",
+      "filename": "low-on-fire.zip",
+      "providerFilename": "LowOnFire v26.2§8.zip",
+      "url": "https://cdn.modrinth.com/data/RRxvWKNC/versions/yQdcUfnr/LowOnFire%20v26.2%C2%A78.zip",
+      "sha512": "713a20a8171c8249c30d9eb72342162754c627c7a86dc0971cb555faf43c322c181fd5546e0c770fc9ae922161ee846a7af951267c1d9a8a75af466a17e19d5e",
+      "size": 42760,
+      "channel": "release"
+    }
+  },
+  "shaders": {},
+  "players": []
+}
