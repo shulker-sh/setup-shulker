@@ -1,5 +1,5 @@
 {
-  "lockVersion": 1,
+  "$schema": "https://shulker.sh/schema/v1/lock.json",
   "minecraft": "26.3",
   "java": {
     "major": 25,
@@ -9,5 +9,6 @@
   "mods": {},
   "resourcepacks": {},
   "shaders": {},
+  "datapacks": {},
   "players": []
 }
