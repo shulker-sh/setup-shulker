@@ -213,3 +213,43 @@ jobs:
             echo "vanilla lock outputs are minecraft '$MINECRAFT', loader '$LOADER'" >&2
             exit 1
           fi
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Copy pack a
+        shell: bash
+        run: mkdir -p "$RUN_DIR" && cp -R test/a "$RUN_DIR/a"
+
+      - uses: ./
+        with:
+          lock-files: ${{ env.RUN_DIR }}/a/shulker.lock
+
+      - name: Check a clean pack
+        shell: bash
+        run: |
+          cd "$RUN_DIR/a"
+          tree() { find . -type f -exec sha256sum {} + | sort; }
+          before="$(tree)"
+          shulker check
+          if [ "$(tree)" != "$before" ] || [ -e build ]; then
+            echo "shulker check changed the project" >&2
+            exit 1
+          fi
+
+      - name: Check a stale lock
+        shell: bash
+        run: |
+          cd "$RUN_DIR/a"
+          jq '.requires["fresh-animations"].channel = "release"' shulker.json > shulker.json.new
+          mv shulker.json.new shulker.json
+          if out="$(shulker check lock --json)"; then
+            echo "shulker check passed a stale lock: $out" >&2
+            exit 1
+          fi
+          if [ "$(jq -r '.data.problems[0].code' <<< "$out")" != lock-stale ]; then
+            echo "shulker check failed without lock-stale: $out" >&2
+            exit 1
+          fi
