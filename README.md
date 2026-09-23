@@ -33,6 +33,9 @@ steps:
   - run: shulker check
 ```
 
+Each problem shows as an annotation on the run: shulker prints GitHub's workflow commands whenever
+`GITHUB_ACTIONS` is set, and `--no-annotations` turns that off.
+
 Checking, exporting, releasing and publishing stay your workflow's own steps. The
 [GitHub Actions guide](https://shulker.sh/docs/github-actions) has a complete workflow that checks a pack on every
 push, and one that releases it on a version tag.
