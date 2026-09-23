@@ -18,9 +18,24 @@ steps:
   - run: shulker export mrpack --version "${GITHUB_REF_NAME#v}"
 ```
 
-Exporting, releasing and publishing stay your workflow's own steps. The
-[GitHub Actions guide](https://shulker.sh/docs/github-actions) has a complete workflow that releases a pack on a
-version tag.
+To check a pack on every push and pull request, run [`shulker check`](https://shulker.sh/docs/cli#shulker-check)
+after the action. It fails when `shulker.lock` doesn't match `shulker.json`, a locked file can't be downloaded, or a
+mod's dependencies aren't met, and writes nothing to the project:
+
+```yaml
+on: [push, pull_request]
+
+steps:
+  - uses: actions/checkout@v7
+  - uses: shulker-sh/setup-shulker@v1
+    with:
+      version: v0.0.1
+  - run: shulker check
+```
+
+Checking, exporting, releasing and publishing stay your workflow's own steps. The
+[GitHub Actions guide](https://shulker.sh/docs/github-actions) has a complete workflow that checks a pack on every
+push, and one that releases it on a version tag.
 
 ## Inputs
 
@@ -60,7 +75,8 @@ version tag.
 The action sets `SHULKER_CACHE` to a folder in the runner's temp directory and caches it with
 [`actions/cache`](https://github.com/actions/cache). The key is the runner OS plus a hash of every file in
 `lock-files`: while the locks are unchanged, an export downloads nothing, and after a change it starts from the
-previous cache and downloads only what's new.
+previous cache and downloads only what's new. `shulker check` reads the same cache, so a check with unchanged
+locks downloads nothing either.
 
 A pack that isn't at the root of its repository names its lock with `lock-files`. A repository holding several packs
 lists each one's lock:
