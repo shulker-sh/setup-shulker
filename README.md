@@ -1,6 +1,11 @@
 # setup-shulker
 
-Installs [shulker](https://shulker.sh), the modpack CLI, in a GitHub Actions job:
+<p>
+  <a href="https://github.com/shulker-sh/setup-shulker/releases"><img alt="Release" src="https://img.shields.io/github/v/release/shulker-sh/setup-shulker?style=for-the-badge"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge"></a>
+</p>
+
+Installs [shulker](https://github.com/shulker-sh/shulker), the modpack CLI, in a GitHub Actions job:
 
 - installs a shulker release on Linux, macOS or Windows runners;
 - adds `shulker` to `PATH` for later steps;
@@ -102,4 +107,4 @@ verify its build provenance with `gh`. A download whose provenance can't be veri
 
 ## License
 
-[MIT](LICENSE)
+setup-shulker is released under the [MIT License](LICENSE).
