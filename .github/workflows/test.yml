@@ -194,6 +194,7 @@ jobs:
           (cd test/b && shulker export mrpack --version 1.0.0)
 
   vanilla:
+    needs: multiple
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -215,6 +216,7 @@ jobs:
           fi
 
   check:
+    needs: multiple
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
