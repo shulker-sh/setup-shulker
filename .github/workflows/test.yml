@@ -221,16 +221,16 @@ jobs:
 
       - name: Copy pack a
         shell: bash
-        run: mkdir -p "$RUN_DIR" && cp -R test/a "$RUN_DIR/a"
+        run: mkdir -p "$RUN_DIR" && cp -R test/a "$RUN_DIR/check"
 
       - uses: ./
         with:
-          lock-files: ${{ env.RUN_DIR }}/a/shulker.lock
+          lock-files: ${{ env.RUN_DIR }}/check/shulker.lock
 
       - name: Check a clean pack
         shell: bash
         run: |
-          cd "$RUN_DIR/a"
+          cd "$RUN_DIR/check"
           tree() { find . -type f -exec sha256sum {} + | sort; }
           before="$(tree)"
           shulker check
@@ -242,7 +242,7 @@ jobs:
       - name: Check a stale lock
         shell: bash
         run: |
-          cd "$RUN_DIR/a"
+          cd "$RUN_DIR/check"
           jq '.requires["fresh-animations"].channel = "release"' shulker.json > shulker.json.new
           mv shulker.json.new shulker.json
           if out="$(shulker check lock --json)"; then
