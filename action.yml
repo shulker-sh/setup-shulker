@@ -134,6 +134,7 @@ runs:
 
     - name: Restore shulker cache
       id: cache
+      if: steps.locks.outputs.count != '0'
       uses: actions/cache@v6
       with:
         path: ${{ runner.temp }}/shulker-cache
