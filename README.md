@@ -23,6 +23,10 @@ steps:
   - run: shulker export mrpack --version "${GITHUB_REF_NAME#v}"
 ```
 
+`@v1` follows every 1.x release. To pin an exact release instead, name its commit with the release beside it, as
+the [GitHub Actions guide](https://shulker.sh/docs/github-actions#pinned-actions) does,
+`shulker-sh/setup-shulker@<commit> # v1.0.0`, and let Dependabot offer each new one.
+
 To check a pack on every push and pull request, run [`shulker check`](https://shulker.sh/docs/cli#shulker-check)
 after the action. It fails when `shulker.lock` doesn't match `shulker.json`, a locked file can't be downloaded, or a
 mod's dependencies aren't met, and writes nothing to the project:
